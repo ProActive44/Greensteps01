@@ -2,6 +2,13 @@
 
 GreenSteps is a behavior-first platform that encourages eco-friendly habits through daily logging, visual environmental impact tracking, and gamified reward systems.
 
+
+## 🔗 Live Links
+
+- **Frontend**: [https://greensteps01.vercel.app/](https://greensteps01.vercel.app/)
+- **Backend API**: [https://greensteps01.onrender.com](https://greensteps01.onrender.com)
+
+
 ## Features
 
 - 🌱 Log daily eco-habits from a predefined list
