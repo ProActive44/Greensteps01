@@ -54,8 +54,19 @@ export const authAPI = {
   },
 };
 
+
+// Info API
+export const infoAPI = {
+};
+
+
 // Action API
 export const actionAPI = {
+  getAllActions: () => {
+    return apiRequest('/api/info/my-actions');
+  },
+
+  
   logActions: (actions) => {
     return apiRequest('/api/actions', {
       method: 'POST',
@@ -122,10 +133,33 @@ export const journalAPI = {
   },
 };
 
+// Progress API
+export const progressAPI = {
+  getProgressData: () => {
+    return apiRequest('/api/progress');
+  },
+  
+  getMonthlyProgress: (year = new Date().getFullYear()) => {
+    return apiRequest(`/api/progress/monthly?year=${year}`);
+  },
+  
+  getCategoryImpact: () => {
+    return apiRequest('/api/progress/categories');
+  },
+
+  getAllActions: () => {
+    return apiRequest('/api/info/my-actions');
+  }
+};
+
+
+
+
 export default {
   auth: authAPI,
   actions: actionAPI,
   badges: badgeAPI,
   community: communityAPI,
-  journal: journalAPI
+  journal: journalAPI,
+  progress: progressAPI
 }; 

@@ -2,59 +2,68 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../ui/Button';
 import toast from 'react-hot-toast';
-
-// Sample data - in a real app, this would come from an API
-const MOCK_PROGRESS_DATA = {
-  totalPoints: 825,
-  actionsCompleted: 32,
-  co2Saved: 215,
-  progressByMonth: [
-    { month: 'Jan', points: 50, actions: 2 },
-    { month: 'Feb', points: 75, actions: 3 },
-    { month: 'Mar', points: 60, actions: 2 },
-    { month: 'Apr', points: 120, actions: 5 },
-    { month: 'May', points: 180, actions: 8 },
-    { month: 'Jun', points: 210, actions: 7 },
-    { month: 'Jul', points: 130, actions: 5 }
-  ],
-  impactByCategory: [
-    { category: 'Transportation', count: 12, points: 320 },
-    { category: 'Energy', count: 8, points: 200 },
-    { category: 'Waste', count: 7, points: 180 },
-    { category: 'Food', count: 3, points: 90 },
-    { category: 'Water', count: 2, points: 35 }
-  ],
-  badges: [
-    { id: 1, name: 'Early Bird', description: 'Log your first action', earned: true, date: '2023-01-15' },
-    { id: 2, name: 'Eco Warrior', description: 'Complete 10 actions', earned: true, date: '2023-03-22' },
-    { id: 3, name: 'Climate Champion', description: 'Complete 30 actions', earned: true, date: '2023-06-10' },
-    { id: 4, name: 'Sustainability Master', description: 'Earn 1000 eco points', earned: false }
-  ]
-};
+import { progressAPI } from '../../services/api';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 const ProgressTracker = () => {
   const navigate = useNavigate();
   const [progressData, setProgressData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [pieData, setPieData] = useState([]);
 
   useEffect(() => {
-    // Simulate API call
-    const fetchProgressData = async () => {
-      try {
-        // In a real app, this would be an API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setProgressData(MOCK_PROGRESS_DATA);
-      } catch (error) {
-        console.error('Error fetching progress data:', error);
-        toast.error('Failed to load your progress data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProgressData();
   }, []);
+
+  const fetchProgressData = async () => {
+    try {
+      setLoading(true);
+      
+      // Get progress data
+      const response = await progressAPI.getProgressData();
+      
+      if (response.success) {
+        // Use empty arrays for data that might be missing
+        const emptyProgressByMonth = [];
+        const emptyImpactByCategory = [];
+        const emptyBadges = [];
+        
+        setProgressData({
+          totalPoints: response.totalPoints || 0,
+          actionsCompleted: response.totalActions || 0,
+          co2Saved: response.totalCarbonSaved || 0,
+          progressByMonth: Array.isArray(response.progressByMonth) ? response.progressByMonth : emptyProgressByMonth,
+          impactByCategory: Array.isArray(response.impactByCategory) ? response.impactByCategory : emptyImpactByCategory,
+          badges: Array.isArray(response.badges) ? response.badges.map(badge => ({
+            id: badge._id || badge.id,
+            name: badge.name,
+            description: badge.description,
+            earned: badge.isUnlocked,
+            date: badge.earnedDate || badge.date || badge.createdAt || new Date().toISOString(),
+            icon: badge.icon,
+            progress: badge.progress,
+            target: badge.target || badge.requirement
+          })) : emptyBadges
+        });
+      } else {
+        console.log(response)
+        toast.error('Failed to load progress data');
+      }
+      
+      // Get category impact for pie chart
+      // const categoryResponse = await progressAPI.getCategoryImpact();
+      // if (categoryResponse.success) {
+      //   setPieData(categoryResponse.mostPerformedActions || []);
+      // }
+      
+    } catch (error) {
+      console.error('Error fetching progress data:', error);
+      toast.error('Failed to load your progress data');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Simple bar chart component
   const BarChart = ({ data, labelKey, valueKey, maxValue, colorClass = 'bg-primary-500' }) => {
@@ -67,7 +76,7 @@ const ProgressTracker = () => {
               <div className="relative h-8 bg-gray-100 rounded-full overflow-hidden">
                 <div 
                   className={`absolute left-0 top-0 bottom-0 ${colorClass} transition-all duration-1000 ease-out`}
-                  style={{ width: `${(item[valueKey] / maxValue) * 100}%` }}
+                  style={{ width: `${Math.min((item[valueKey] / (maxValue || 1)) * 100, 100)}%` }}
                 ></div>
                 <div className="absolute inset-0 flex items-center justify-end px-3">
                   <span className="text-xs font-medium">{item[valueKey]}</span>
@@ -79,6 +88,9 @@ const ProgressTracker = () => {
       </div>
     );
   };
+
+  // For pie chart colors
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
@@ -189,13 +201,26 @@ const ProgressTracker = () => {
                   <h2 className="text-xl font-semibold text-gray-800 mb-6">Monthly Progress</h2>
                   <div className="mb-8">
                     <h3 className="text-lg font-medium text-gray-800 mb-4">Eco Points by Month</h3>
-                    <BarChart 
-                      data={progressData.progressByMonth} 
-                      labelKey="month" 
-                      valueKey="points" 
-                      maxValue={Math.max(...progressData.progressByMonth.map(d => d.points))}
-                      colorClass="bg-primary-500"
-                    />
+                    {progressData.progressByMonth && progressData.progressByMonth.length > 0 ? (
+                      <BarChart 
+                        data={progressData.progressByMonth} 
+                        labelKey="month" 
+                        valueKey="points" 
+                        maxValue={Math.max(...progressData.progressByMonth.map(d => d.points || 0), 1)}
+                        colorClass="bg-primary-500"
+                      />
+                    ) : (
+                      <div className="py-12 text-center text-gray-500">
+                        <p>No data available yet. Start logging your eco-actions to see your progress!</p>
+                        <Button
+                          variant="primary"
+                          className="mt-6"
+                          onClick={() => navigate('/log-action')}
+                        >
+                          Log Your First Action
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <h3 className="text-lg font-medium text-gray-800 mb-4">Actions by Month</h3>

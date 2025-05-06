@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../ui/Button';
 import toast from 'react-hot-toast';
+import { actionAPI } from '../../services/api';
 
 // Sample data - in a real app, this would come from an API
 const MOCK_ACTIONS = [
@@ -18,12 +19,17 @@ const ActionHistory = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate API call
     const fetchActions = async () => {
       try {
-        // In a real app, this would be an API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setActions(MOCK_ACTIONS);
+        setLoading(true);
+        let response = await actionAPI.getActions();
+        console.log(response)
+        if (response.success) {
+          setActions(response.actions || []);
+        }
+        else {
+          toast.error('Failed to load actions');
+        }
       } catch (error) {
         console.error('Error fetching actions:', error);
         toast.error('Failed to load your action history');
@@ -37,14 +43,14 @@ const ActionHistory = () => {
 
   const getImpactColor = (impact) => {
     switch (impact) {
-      case 'low':
-        return 'bg-green-100 text-green-800';
-      case 'medium':
-        return 'bg-blue-100 text-blue-800';
-      case 'high':
-        return 'bg-purple-100 text-purple-800';
+      case 1:
+        return 'bg-green-800 text-green-800';
+      case 1.5:
+        return 'bg-blue-800 text-blue-800';
+      case 2:
+        return 'bg-red-800 text-purple-800';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-800 text-gray-800';
     }
   };
 
@@ -103,20 +109,20 @@ const ActionHistory = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {actions.map((action) => (
-                    <tr key={action.id} className="hover:bg-gray-50">
+                    <tr key={action._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(action.date).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                        {action.action}
+                        {action.type}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getImpactColor(action.impact)}`}>
-                          {action.impact.charAt(0).toUpperCase() + action.impact.slice(1)}
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getImpactColor(action.points)}`}>
+                          *
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                        {action.description}
+                        {action.notes || action.type}
                       </td>
                     </tr>
                   ))}

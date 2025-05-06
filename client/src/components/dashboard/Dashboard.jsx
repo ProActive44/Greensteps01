@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import Button from '../ui/Button';
 import { useNavigate } from 'react-router-dom';
 import { actionAPI } from '../../services/api';
+import PointsCounter from '../ui/PointsCounter';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -17,26 +18,56 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadUserStats();
+    if (user) {
+      loadUserStats();
+    }
+  }, [user]);
+
+  // Refresh stats when coming back to the dashboard
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && user) {
+        loadUserStats();
+      }
+    };
+
+    // Add event listener for page visibility changes
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Add event listener for when the user returns to this page
+    window.addEventListener('focus', () => user && loadUserStats());
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', () => user && loadUserStats());
+    };
   }, [user]);
 
   const loadUserStats = async () => {
-    if (!user) return;
-    
     try {
       setLoading(true);
-      // Get the latest stats from the API instead of just using user object
+      
+      // Get the latest stats from the API
       const response = await actionAPI.getActionStats();
       
-      if (response.success) {
+      if (response.success && response.stats) {
+        // Make sure we're accessing the streak data correctly
+        const currentStreak = response.stats.streak && response.stats.streak.current 
+          ? response.stats.streak.current 
+          : 0;
+        
         setStats({
-          ecoPoints: response.totalPoints || 0,
-          streak: response.currentStreak || 0,
-          badgesCount: response.earnedBadges?.length || 0,
-          carbonSaved: response.totalCarbonSaved || 0
+          ecoPoints: response.stats.totalPoints || 0,
+          // Use the correct streak value
+          streak: currentStreak,
+          badgesCount: user.badges?.length || 0,
+          carbonSaved: response.stats.totalCarbonSaved || 0
         });
+        
+        console.log('Current streak from API:', currentStreak); // Debug log
       } else {
         // Fallback to user object if API fails
+        console.log('Using fallback streak data:', user.currentStreak); // Debug log
         setStats({
           ecoPoints: user.totalPoints || 0,
           streak: user.currentStreak || 0,
@@ -57,27 +88,6 @@ const Dashboard = () => {
       setLoading(false);
     }
   };
-
-  // Expose a refresh method that can be called when returning to dashboard
-  useEffect(() => {
-    // Create a listener for when this page becomes active
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        loadUserStats();
-      }
-    };
-
-    // Add event listener for page visibility changes
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    // Add event listener for when the user returns to this page
-    window.addEventListener('focus', loadUserStats);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', loadUserStats);
-    };
-  }, []);
 
   const handleLogout = async () => {
     try {
@@ -108,6 +118,7 @@ const Dashboard = () => {
             {/* Desktop navigation */}
             <nav className="hidden md:flex md:items-center md:space-x-4">
               <span className="text-sm font-medium text-gray-700">
+                {/* {console.log(user)} */}
                 Welcome, {user.username || 'User'}
               </span>
               <div className="h-4 w-px bg-gray-300"></div>
@@ -148,7 +159,7 @@ const Dashboard = () => {
             <div className="pt-2 pb-3 space-y-1 px-4">
               <div className="flex items-center justify-between py-2">
                 <span className="text-sm font-medium text-gray-700">
-                  Welcome, {user.username || 'User'}
+                  Welcome, {user.username || user.name || 'User'}
                 </span>
                 <Button
                   onClick={handleLogout}
@@ -171,15 +182,18 @@ const Dashboard = () => {
             <StatsCard 
               title="Eco Points" 
               value={stats.ecoPoints} 
+              previousValue={stats.ecoPoints} 
               icon={<LeafIcon className="h-4 w-4 sm:h-5 sm:w-5" />} 
               trend="up"
               color="primary"
               animate="slide-up"
+              delay="delay-100"
               loading={loading}
             />
             <StatsCard 
               title="Current Streak" 
-              value={`${stats.streak} days`} 
+              value={`${stats.streak}`} 
+              previousValue={stats.streak} 
               icon={<FireIcon className="h-4 w-4 sm:h-5 sm:w-5" />} 
               trend="up"
               color="amber"
@@ -190,6 +204,7 @@ const Dashboard = () => {
             <StatsCard 
               title="Badges Earned" 
               value={stats.badgesCount} 
+              previousValue={stats.badgesCount} 
               icon={<BadgeIcon className="h-4 w-4 sm:h-5 sm:w-5" />} 
               trend="neutral"
               color="indigo"
@@ -375,7 +390,7 @@ const Dashboard = () => {
 };
 
 // Stats card component
-const StatsCard = ({ title, value, icon, trend, color, animate, delay, loading }) => {
+const StatsCard = ({ title, value, previousValue, icon, trend, color, animate, delay, loading }) => {
   const colors = {
     primary: 'text-primary-600 bg-primary-100',
     blue: 'text-blue-600 bg-blue-100',
@@ -438,7 +453,13 @@ const StatsCard = ({ title, value, icon, trend, color, animate, delay, loading }
         <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
       ) : (
         <div className="flex items-center justify-between">
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
+          <p className="text-2xl font-bold text-gray-900">
+            {typeof value === 'number' ? (
+              <PointsCounter value={value} previousValue={previousValue || 0} />
+            ) : (
+              value
+            )}
+          </p>
           {trend && trends[trend]}
         </div>
       )}

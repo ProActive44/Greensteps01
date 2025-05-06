@@ -1,9 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import Button from '../ui/Button';
+import { communityAPI } from '../../services/api';
+import { io } from 'socket.io-client';
 
 const CommunityBoard = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const socketRef = useRef(null);
   const [stats, setStats] = useState({
     totalActions: 0,
     totalUsers: 0,
@@ -18,48 +23,118 @@ const CommunityBoard = () => {
   });
 
   useEffect(() => {
+    // Initial load of community stats
     loadCommunityStats();
+    
+    // Set up WebSocket connection
+    const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    socketRef.current = io(SOCKET_URL);
+    
+    // Listen for real-time updates
+    socketRef.current.on('connect', () => {
+      console.log('Connected to community socket');
+    });
+    
+    socketRef.current.on('community-stats-updated', (data) => {
+      console.log('Received real-time community update:', data);
+      updateStatsFromSocketData(data);
+    });
+    
+    socketRef.current.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+    });
+    
+    // Clean up on unmount
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
   }, []);
+  
+  const updateStatsFromSocketData = (data) => {
+    if (!data) return;
+    
+    // Prepare the updated stats
+    const updatedStats = { ...stats };
+    
+    if (data.stats) {
+      updatedStats.totalActions = data.stats.totalActions || stats.totalActions;
+      updatedStats.totalUsers = data.stats.totalUsers || stats.totalUsers;
+      updatedStats.totalCarbonSaved = data.stats.totalCarbonSaved || stats.totalCarbonSaved;
+      
+      if (data.stats.actionsByType) {
+        updatedStats.topHabits = data.stats.actionsByType.map(habit => ({
+          name: habit.name,
+          count: habit.count,
+          carbonSaved: habit.carbonSaved
+        }));
+      }
+      
+      if (data.stats.weekly) {
+        updatedStats.weeklyStats = {
+          actionsThisWeek: data.stats.weekly.actionsThisWeek || stats.weeklyStats.actionsThisWeek,
+          mostPopularHabit: data.stats.weekly.mostPopularHabit || stats.weeklyStats.mostPopularHabit,
+          participationRate: data.stats.weekly.participationRate || stats.weeklyStats.participationRate
+        };
+      }
+    }
+    
+    if (data.leaderboard) {
+      updatedStats.leaderboard = data.leaderboard;
+    }
+    
+    // Update state with new data
+    setStats(updatedStats);
+    
+    // Show toast notification for real-time updates
+    toast.success('Community stats updated in real-time!', {
+      id: 'community-update',
+      duration: 2000
+    });
+  };
 
   const loadCommunityStats = async () => {
     try {
-      // TODO: Replace with actual API call
-      const mockData = {
-        totalActions: 1547,
-        totalUsers: 234,
-        totalCarbonSaved: 2890,
-        topHabits: [
-          { name: 'Public Transport', count: 423, carbonSaved: 846 },
-          { name: 'No-Plastic Day', count: 389, carbonSaved: 389 },
-          { name: 'Skipped Meat', count: 356, carbonSaved: 1068 },
-          { name: 'Carpooling', count: 245, carbonSaved: 490 },
-          { name: 'Reused Container', count: 134, carbonSaved: 97 }
-        ],
-        leaderboard: [
-          { username: 'EcoWarrior', points: 856, rank: 1, streak: 15 },
-          { username: 'GreenHero', points: 742, rank: 2, streak: 12 },
-          { username: 'EarthGuardian', points: 695, rank: 3, streak: 8 },
-          { username: 'PlanetSaver', points: 634, rank: 4, streak: 10 },
-          { username: 'EcoChampion', points: 589, rank: 5, streak: 7 },
-          { username: 'GreenNinja', points: 567, rank: 6, streak: 9 },
-          { username: 'EarthAngel', points: 543, rank: 7, streak: 6 },
-          { username: 'EcoExplorer', points: 521, rank: 8, streak: 5 },
-          { username: 'GreenKeeper', points: 498, rank: 9, streak: 4 },
-          { username: 'PlanetHero', points: 476, rank: 10, streak: 3 }
-        ],
-        weeklyStats: {
-          actionsThisWeek: 287,
-          mostPopularHabit: 'Public Transport',
-          participationRate: 78
-        }
-      };
-
-      setStats(mockData);
+      setLoading(true);
+      
+      // Get community stats
+      const statsResponse = await communityAPI.getStats();
+      
+      // Get leaderboard
+      const leaderboardResponse = await communityAPI.getLeaderboard();
+      
+      if (statsResponse.success && leaderboardResponse.success) {
+        // Format the data for our component
+        setStats({
+          totalActions: statsResponse.stats.totalActions || 0,
+          totalUsers: statsResponse.stats.totalUsers || 0,
+          totalCarbonSaved: statsResponse.stats.totalCarbonSaved || 0,
+          topHabits: statsResponse.stats.actionsByType || [],
+          leaderboard: leaderboardResponse.leaderboard || [],
+          weeklyStats: {
+            actionsThisWeek: statsResponse.stats.weekly?.actionsThisWeek || 0,
+            mostPopularHabit: statsResponse.stats.weekly?.mostPopularHabit || 'N/A',
+            participationRate: statsResponse.stats.weekly?.participationRate || 0
+          }
+        });
+      } else {
+        toast.error('Failed to load community data');
+      }
     } catch (error) {
+      console.error('Failed to load community statistics:', error);
       toast.error('Failed to load community statistics');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Refresh data manually
+  const handleRefresh = () => {
+    toast.loading('Refreshing community data...', { id: 'refresh' });
+    loadCommunityStats().then(() => {
+      toast.success('Data refreshed!', { id: 'refresh' });
+    });
   };
 
   if (loading) {
@@ -73,10 +148,37 @@ const CommunityBoard = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Community Impact</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            See how our community is making a difference together
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Community Impact</h1>
+            <p className="mt-2 text-sm text-gray-600">
+              See how our collective actions are making a difference
+            </p>
+          </div>
+          <div className="flex space-x-3">
+            <Button
+              variant="primary"
+              onClick={handleRefresh}
+            >
+              Refresh Data
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+            >
+              Back to Dashboard
+            </Button>
+          </div>
+        </div>
+
+        {/* Real-time indicator */}
+        <div className="mb-6 bg-green-50 p-3 rounded-lg border border-green-200 flex items-center">
+          <div className="relative mr-3">
+            <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+            <div className="w-3 h-3 bg-green-500 rounded-full absolute top-0 left-0 animate-ping"></div>
+          </div>
+          <p className="text-sm text-green-700">
+            Live data - updates in real-time as community members log actions
           </p>
         </div>
 

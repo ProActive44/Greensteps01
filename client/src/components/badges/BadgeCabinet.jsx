@@ -66,23 +66,31 @@ const BadgeCabinet = () => {
               Track your progress and unlock achievements as you build eco-friendly habits
             </p>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => navigate('/log-action')}
-          >
-            Log New Action
-          </Button>
+          <div className="flex space-x-3">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/log-action')}
+            >
+              Log New Action
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+            >
+              Back to Dashboard
+            </Button>
+          </div>
         </div>
 
         {/* Current Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <div className="bg-white rounded-lg shadow p-6 text-center">
             <h3 className="text-lg font-medium text-gray-900">Current Streak</h3>
-            <p className="text-3xl font-bold text-primary-600">{stats.currentStreak} days</p>
+            <p className="text-3xl font-bold text-primary-600">{stats.currentStreak} {stats.currentStreak > 1 ? "days" : "day"}</p>
           </div>
           <div className="bg-white rounded-lg shadow p-6 text-center">
             <h3 className="text-lg font-medium text-gray-900">Longest Streak</h3>
-            <p className="text-3xl font-bold text-blue-600">{stats.longestStreak} days</p>
+            <p className="text-3xl font-bold text-blue-600">{stats.longestStreak} {stats.longestStreak > 1 ? "days" : "day"}</p>
           </div>
           <div className="bg-white rounded-lg shadow p-6 text-center">
             <h3 className="text-lg font-medium text-gray-900">Total Badges</h3>

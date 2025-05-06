@@ -28,7 +28,8 @@ export const AuthProvider = ({ children }) => {
       
       if (response.ok) {
         const userData = await response.json();
-        setUser(userData);
+        // console.log(userData);
+        setUser(userData.user);
       } else {
         localStorage.removeItem('token');
         toast.error('Session expired. Please login again.');

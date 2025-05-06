@@ -4,7 +4,6 @@ import { Toaster } from 'react-hot-toast';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import Dashboard from './components/dashboard/Dashboard';
-import LogActions from './components/actions/LogActions';
 import ActionHistory from './components/actions/ActionHistory';
 import ProgressTracker from './components/progress/ProgressTracker';
 import DailyActionLogger from './components/actions/DailyActionLogger';

@@ -84,14 +84,14 @@ const ImpactDashboard = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Your Environmental Impact</h1>
             <p className="mt-2 text-sm text-gray-600">
-              Track your eco-friendly actions and their impact on the environment
+              See the difference your eco-friendly habits are making
             </p>
           </div>
           <Button
             variant="outline"
-            onClick={() => navigate('/log-action')}
+            onClick={() => navigate('/')}
           >
-            Log New Action
+            Back to Dashboard
           </Button>
         </div>
 

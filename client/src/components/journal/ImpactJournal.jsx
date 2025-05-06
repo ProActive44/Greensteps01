@@ -47,7 +47,7 @@ const ImpactJournal = () => {
           pages: 0
         });
       } else {
-        toast.error('Failed to load journal data');
+        toast.error(response.msg || 'Failed to load journal data');
       }
     } catch (error) {
       toast.error('Failed to load journal data');
@@ -69,7 +69,7 @@ const ImpactJournal = () => {
         const reflectionAction = response.actions.find(action => action.type === 'Reflection');
         setReflection(reflectionAction ? reflectionAction.notes : '');
       } else {
-        toast.error('Failed to load day details');
+        toast.error(response.msg || 'Failed to load day details');
       }
     } catch (error) {
       toast.error('Failed to load day details');
@@ -152,12 +152,20 @@ const ImpactJournal = () => {
               Track your eco-friendly journey and reflect on your impact
             </p>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => navigate('/log-action')}
-          >
-            Log New Action
-          </Button>
+          <div className="flex space-x-3">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/log-action')}
+            >
+              Log New Action
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+            >
+              Back to Dashboard
+            </Button>
+          </div>
         </div>
 
         {/* Overall Stats */}

@@ -89,13 +89,14 @@ body {
 }
 
 /* Fix button visibility issues */
-/* button {
+button {
   position: relative;
   z-index: 10 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-} */
+  cursor: pointer;
+}
 
 /* Ensure button text is visible */
 /* button span {
