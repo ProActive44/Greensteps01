@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const AuthContext = createContext(null);
@@ -30,9 +31,11 @@ export const AuthProvider = ({ children }) => {
         setUser(data.user);
       } else {
         localStorage.removeItem('token');
+        toast.error('Session expired. Please login again.', { id: 'session-expired' });
       }
     } catch (error) {
       console.error('Error fetching user:', error);
+      localStorage.removeItem('token');
     } finally {
       setLoading(false);
     }
@@ -89,6 +92,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
+    toast.success('Logged out successfully');
   };
 
   return (
