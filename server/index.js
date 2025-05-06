@@ -3,6 +3,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const http = require('http');
+const { Server } = require('socket.io');
 
 const app = express();
 
@@ -44,6 +46,8 @@ try {
   app.use('/api/badges', require('./routes/badges'));
   app.use('/api/community', require('./routes/community'));
   app.use('/api/journal', require('./routes/journal'));
+  app.use('/api/progress', require('./routes/progress'));
+  app.use('/api/info', require('./routes/info'));
 } catch (error) {
   console.warn('Some routes could not be loaded:', error.message);
 }
@@ -65,5 +69,32 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// After app is defined, create a server
+const server = http.createServer(app);
+
+// Create Socket.IO server with CORS options
+const io = new Server(server, {
+  cors: {
+    origin: '*', // In production, restrict to your actual client origin
+    methods: ['GET', 'POST']
+  }
+});
+
+// WebSocket connection handler
+io.on('connection', (socket) => {
+  console.log('New client connected:', socket.id);
+  
+  // Join the community room to receive updates
+  socket.join('community');
+  
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+});
+
+// Make io available globally
+app.set('io', io);
+
+// Update the listen call to use the HTTP server instead of app
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`)); 
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`)); 
