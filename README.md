@@ -16,6 +16,75 @@ GreenSteps is a behavior-first platform that encourages eco-friendly habits thro
 - **Backend**: Node.js, Express
 - **Database**: MongoDB
 
+**Authentication:**
+- JWT-based secure auth
+- bcrypt for password hashing
+
+**Hosting:**
+- Vercel (Frontend)
+- Render (Backend API)
+- MongoDB Atlas (Database)
+
+
+## 🚀 Core Features (MVP)
+
+### ✅ 1. Daily Eco-Action Logging
+- Fixed list of eco-habits:
+  - Carpooling
+  - Reused Container
+  - Skipped Meat
+  - Used Public Transport
+  - No-Plastic Day
+  - Others (Custom)
+- Users can:
+  - Check off actions once per day
+  - Add optional notes
+  - Logs are date-stamped and immutable
+
+### 📊 2. Impact Calculation & Visualization
+- Habits have eco-points (e.g., Skipped Meat = 2 pts)
+- Display:
+  - Daily/weekly points
+  - Total carbon saved (mock)
+  - Line chart of daily eco-points
+  - Pie chart of most frequent habits
+
+### 🏆 3. Badges & Streaks
+- Auto-award:
+  - Streak Badges (e.g., 7-day log streak)
+  - Milestone Badges (e.g., 100 pts earned)
+  - Category Hero (e.g., Used Public Transport 15 times)
+- Show:
+  - Active streak counter
+  - Badge cabinet (locked/unlocked)
+  - Animations for unlocks
+
+### 🌍 4. Global Community View
+- Total actions logged across all users
+- Most common habit this week
+- Top 10 users (by points, usernames/initials only)
+- All stats are anonymous and read-only
+
+### 📔 5. Impact Journal
+- Timeline of past actions
+- Points per day + reflection notes
+- Click a date to view full breakdown
+
+### 🎨 6. UI Enhancements
+- Gamified animations (e.g., badge unlocks)
+- Real-time points counter on dashboard
+- Mobile-optimized design
+- Eco-friendly theme (greens, earth tones)
+
+### 🧪 Additional Notes
+- All logs are immutable after submission
+- Points, streaks, and badges are auto-calculated from real activity
+- Global stats are securely queried and anonymized
+- Dynamic and persistent data updates
+
+
+
+
 ## Setup
 
 ### Prerequisites
@@ -43,7 +112,7 @@ VITE_APP_NAME=GreenSteps
 
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/greensteps.git
+git clone https://github.com/ProActive44/Greensteps01.git
 cd greensteps
 ```
 
@@ -61,21 +130,12 @@ npm run dev
 
 **Run server only**
 ```bash
+cd server
 npm run server
 ```
 
 **Run client only**
 ```bash
+cd client
 npm run client
 ```
-
-## API Endpoints
-
-### Authentication
-- POST `/api/auth/register` - Register a new user
-- POST `/api/auth/login` - Login a user
-- GET `/api/auth/me` - Get current user
-
-## License
-
-ISC 
