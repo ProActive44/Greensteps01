@@ -2,33 +2,63 @@ import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import Input from '../ui/Input';
+import Button from '../ui/Button';
 
 const Register = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [username, setUsername] = useState('');
-  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+  };
+
+  const validate = () => {
+    const newErrors = {};
+    if (!formData.username) newErrors.username = 'Username is required';
+    if (!formData.email) newErrors.email = 'Email is required';
+    if (!formData.password) newErrors.password = 'Password is required';
+    else if (formData.password.length < 6) 
+      newErrors.password = 'Password must be at least 6 characters';
+    
+    if (formData.password !== formData.confirmPassword)
+      newErrors.confirmPassword = 'Passwords do not match';
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    
+    if (!validate()) return;
+    
     setLoading(true);
 
     try {
-      const result = await register(email, password, username);
+      const result = await register(formData.email, formData.password, formData.username);
       if (result.success) {
         toast.success('Account created successfully!');
         navigate('/');
       } else {
-        setError(result.error);
+        setErrors({ form: result.error });
         toast.error(result.error || 'Registration failed');
       }
     } catch (err) {
       const errorMessage = 'An error occurred during registration. Please try again.';
-      setError(errorMessage);
+      setErrors({ form: errorMessage });
       toast.error(errorMessage);
     } finally {
       setLoading(false);
@@ -36,81 +66,117 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Create your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Or{' '}
-            <Link to="/login" className="font-medium text-green-600 hover:text-green-500">
-              sign in to your account
-            </Link>
-          </p>
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary-50 to-primary-100">
+      {/* Decorative elements */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+        <div className="absolute -top-24 -left-24 w-96 h-96 bg-primary-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse-slow"></div>
+        <div className="absolute top-1/3 -right-24 w-96 h-96 bg-primary-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse-slow animation-delay-2000"></div>
+        <div className="absolute -bottom-24 left-1/3 w-96 h-96 bg-primary-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse-slow animation-delay-4000"></div>
+      </div>
+
+      {/* Header with brand */}
+      <header className="z-10 w-full pt-6 px-4">
+        <div className="max-w-md mx-auto">
+          <div className="text-center animate-fade-in">
+            <h1 className="text-3xl font-bold text-primary-600">GreenSteps</h1>
+            <p className="text-sm text-gray-600">Make eco-friendly habits part of your daily routine</p>
+          </div>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-700">{error}</div>
+      </header>
+
+      {/* Main content */}
+      <main className="z-10 flex-grow flex items-center justify-center p-4">
+        <div className="w-full max-w-md animate-slide-up">
+          <div className="bg-white rounded-2xl shadow-lg p-8">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Create your account</h2>
+              <p className="mt-2 text-sm text-gray-600">
+                Already have an account?{' '}
+                <Link to="/login" className="font-medium text-primary-600 hover:text-primary-500">
+                  Sign in
+                </Link>
+              </p>
             </div>
-          )}
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="username" className="sr-only">Username</label>
-              <input
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {errors.form && (
+                <div className="rounded-md bg-red-50 p-4 animate-shake">
+                  <p className="text-sm text-red-700">{errors.form}</p>
+                </div>
+              )}
+              
+              <Input
                 id="username"
                 name="username"
                 type="text"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                label="Username"
+                placeholder="johndoe"
+                value={formData.username}
+                onChange={handleChange}
+                error={errors.username}
                 disabled={loading}
+                required
               />
-            </div>
-            <div>
-              <label htmlFor="email" className="sr-only">Email address</label>
-              <input
+              
+              <Input
                 id="email"
                 name="email"
                 type="email"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                label="Email address"
+                placeholder="your.email@example.com"
+                value={formData.email}
+                onChange={handleChange}
+                error={errors.email}
                 disabled={loading}
+                required
+                autoComplete="email"
               />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">Password</label>
-              <input
+              
+              <Input
                 id="password"
                 name="password"
                 type="password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                label="Password"
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={handleChange}
+                error={errors.password}
                 disabled={loading}
+                required
               />
-            </div>
+              
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                label="Confirm password"
+                placeholder="••••••••"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                error={errors.confirmPassword}
+                disabled={loading}
+                required
+              />
+              
+              <div className="pt-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  fullWidth
+                  loading={loading}
+                >
+                  Create account
+                </Button>
+              </div>
+            </form>
           </div>
+        </div>
+      </main>
 
-          <div>
-            <button
-              type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading}
-            >
-              {loading ? 'Creating account...' : 'Register'}
-            </button>
-          </div>
-        </form>
-      </div>
+      {/* Footer */}
+      <footer className="z-10 py-6 text-center text-xs text-gray-500 animate-fade-in">
+        <p>© {new Date().getFullYear()} GreenSteps. All rights reserved.</p>
+      </footer>
     </div>
   );
 };
