@@ -22,20 +22,21 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await fetch(`${API_URL}/api/auth/me`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'x-auth-token': token
         }
       });
       
       if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
+        const userData = await response.json();
+        setUser(userData);
       } else {
         localStorage.removeItem('token');
-        toast.error('Session expired. Please login again.', { id: 'session-expired' });
+        toast.error('Session expired. Please login again.');
       }
     } catch (error) {
       console.error('Error fetching user:', error);
       localStorage.removeItem('token');
+      toast.error('Network error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -54,14 +55,17 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+        throw new Error(data.msg || 'Login failed');
       }
 
       localStorage.setItem('token', data.token);
-      setUser(data.user);
+      await fetchUser(data.token); // Fetch user data after successful login
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { 
+        success: false, 
+        error: error.message
+      };
     }
   };
 
@@ -78,14 +82,17 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
+        throw new Error(data.msg || 'Registration failed');
       }
 
       localStorage.setItem('token', data.token);
-      setUser(data.user);
+      await fetchUser(data.token); // Fetch user data after successful registration
       return { success: true };
     } catch (error) {
-      return { success: false, error: error.message };
+      return { 
+        success: false, 
+        error: error.message
+      };
     }
   };
 
@@ -96,7 +103,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      login, 
+      register, 
+      logout,
+      isAuthenticated: !!user 
+    }}>
       {children}
     </AuthContext.Provider>
   );

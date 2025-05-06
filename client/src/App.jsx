@@ -7,18 +7,23 @@ import Dashboard from './components/dashboard/Dashboard';
 import LogActions from './components/actions/LogActions';
 import ActionHistory from './components/actions/ActionHistory';
 import ProgressTracker from './components/progress/ProgressTracker';
+import DailyActionLogger from './components/actions/DailyActionLogger';
+import ImpactDashboard from './components/impact/ImpactDashboard';
+import BadgeCabinet from './components/badges/BadgeCabinet';
+import CommunityBoard from './components/community/CommunityBoard';
+import ImpactJournal from './components/journal/ImpactJournal';
 import './App.css'
-
-const APP_NAME = import.meta.env.VITE_APP_NAME || 'GreenSteps';
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500"></div>
-    </div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500"></div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -33,9 +38,11 @@ const RedirectIfAuthenticated = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500"></div>
-    </div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-500"></div>
+      </div>
+    );
   }
 
   if (user) {
@@ -72,6 +79,7 @@ function App() {
           }}
         />
         <Routes>
+          {/* Public Routes */}
           <Route 
             path="/login" 
             element={
@@ -88,6 +96,8 @@ function App() {
               </RedirectIfAuthenticated>
             } 
           />
+
+          {/* Protected Routes */}
           <Route
             path="/"
             element={
@@ -100,7 +110,7 @@ function App() {
             path="/log-action"
             element={
               <ProtectedRoute>
-                <LogActions />
+                <DailyActionLogger />
               </ProtectedRoute>
             }
           />
@@ -120,6 +130,41 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route 
+            path="/impact" 
+            element={
+              <ProtectedRoute>
+                <ImpactDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/achievements" 
+            element={
+              <ProtectedRoute>
+                <BadgeCabinet />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/community" 
+            element={
+              <ProtectedRoute>
+                <CommunityBoard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/journal" 
+            element={
+              <ProtectedRoute>
+                <ImpactJournal />
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Catch all - redirect to home */}
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </AuthProvider>
     </Router>

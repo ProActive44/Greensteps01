@@ -1,113 +1,183 @@
 const express = require('express');
 const router = express.Router();
+const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const Action = require('../models/Action');
+const mongoose = require('mongoose');
 
-// Register new user
-router.post('/register', async (req, res) => {
+// Register user
+router.post('/register', [
+  body('username').trim().not().isEmpty().withMessage('Username is required'),
+  body('email').isEmail().withMessage('Please include a valid email'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long')
+], async (req, res) => {
   try {
-    const { email, password, username } = req.body;
-
-    // Check if user already exists
-    const existingUser = await User.findOne({ 
-      $or: [{ email }, { username }] 
-    });
-
-    if (existingUser) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
       return res.status(400).json({ 
-        error: 'User with this email or username already exists' 
+        success: false,
+        msg: errors.array()[0].msg 
       });
     }
 
-    // Create new user
-    const user = new User({
+    const { username, email, password } = req.body;
+
+    // Check if user exists
+    let user = await User.findOne({ $or: [{ email }, { username }] });
+    if (user) {
+      return res.status(400).json({ 
+        success: false,
+        msg: 'User already exists with this email or username' 
+      });
+    }
+
+    user = new User({
+      username,
       email,
-      password,
-      username
+      password
     });
 
     await user.save();
 
-    // Generate token
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const payload = {
+      user: {
+        id: user.id
+      }
+    };
 
-    res.status(201).json({
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' });
+
+    res.json({
+      success: true,
       token,
       user: {
-        id: user._id,
-        email: user.email,
+        id: user.id,
         username: user.username,
-        ecoPoints: user.ecoPoints,
-        streak: user.streak,
-        badges: user.badges
+        email: user.email,
+        totalPoints: user.totalPoints,
+        currentStreak: user.currentStreak,
+        longestStreak: user.longestStreak
       }
     });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ 
+      success: false,
+      msg: 'Server error' 
+    });
   }
 });
 
 // Login user
-router.post('/login', async (req, res) => {
+router.post('/login', [
+  body('email').isEmail().withMessage('Please include a valid email'),
+  body('password').exists().withMessage('Password is required')
+], async (req, res) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ 
+        success: false,
+        msg: errors.array()[0].msg 
+      });
+    }
+
     const { email, password } = req.body;
 
-    // Find user
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(400).json({ 
+        success: false,
+        msg: 'Invalid credentials' 
+      });
     }
 
-    // Check password
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(400).json({ 
+        success: false,
+        msg: 'Invalid credentials' 
+      });
     }
 
-    // Update last login
-    user.lastLogin = Date.now();
-    await user.save();
+    const payload = {
+      user: {
+        id: user.id
+      }
+    };
 
-    // Generate token
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' });
 
     res.json({
+      success: true,
       token,
       user: {
-        id: user._id,
-        email: user.email,
+        id: user.id,
         username: user.username,
-        ecoPoints: user.ecoPoints,
-        streak: user.streak,
-        badges: user.badges
+        email: user.email,
+        totalPoints: user.totalPoints,
+        currentStreak: user.currentStreak,
+        longestStreak: user.longestStreak
       }
     });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ 
+      success: false,
+      msg: 'Server error' 
+    });
   }
 });
 
-// Get current user
+// Get user profile
 router.get('/me', auth, async (req, res) => {
-  res.json({
-    user: {
-      id: req.user._id,
-      email: req.user.email,
-      username: req.user.username,
-      ecoPoints: req.user.ecoPoints,
-      streak: req.user.streak,
-      badges: req.user.badges
+  try {
+    const user = await User.findById(req.user.id)
+      .select('-password')
+      .populate('badges');
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        msg: 'User not found' 
+      });
     }
-  });
+
+    // Get user's action stats for a summary
+    const actionStats = await Action.aggregate([
+      { $match: { user: new mongoose.Types.ObjectId(req.user.id) } },
+      { $group: {
+          _id: null,
+          totalActions: { $sum: 1 },
+          totalPoints: { $sum: '$points' },
+          totalCarbonSaved: { $sum: '$carbonSaved' }
+        }
+      }
+    ]);
+
+    // Add stats to the response
+    const userWithStats = {
+      ...user.toObject(),
+      actionStats: actionStats.length > 0 ? actionStats[0] : {
+        totalActions: 0,
+        totalPoints: 0,
+        totalCarbonSaved: 0
+      }
+    };
+
+    res.json({
+      success: true,
+      user: userWithStats
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ 
+      success: false,
+      msg: 'Server error' 
+    });
+  }
 });
 
 module.exports = router; 

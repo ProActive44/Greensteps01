@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
+  username: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true
+  },
   email: {
     type: String,
     required: true,
@@ -11,29 +17,26 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
-    minlength: 6
+    required: true
   },
-  username: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true
-  },
-  ecoPoints: {
+  totalPoints: {
     type: Number,
     default: 0
   },
-  streak: {
+  currentStreak: {
     type: Number,
     default: 0
   },
-  lastLogin: {
-    type: Date,
-    default: Date.now
+  longestStreak: {
+    type: Number,
+    default: 0
+  },
+  lastActionDate: {
+    type: Date
   },
   badges: [{
-    type: String
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Badge'
   }],
   createdAt: {
     type: Date,
@@ -54,11 +57,9 @@ userSchema.pre('save', async function(next) {
   }
 });
 
-// Method to compare password
+// Compare password method
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-const User = mongoose.model('User', userSchema);
-
-module.exports = User; 
+module.exports = mongoose.model('User', userSchema); 
